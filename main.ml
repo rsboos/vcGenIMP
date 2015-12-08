@@ -94,8 +94,21 @@ let add (x, y) = x + y;;
 
 ignore (Printf.printf "%s %d" (astnTostr (ALeq(Num 0, Var("x", Progr)))) (add(1,2)));;
 
-let vcg (function,psi) = function
-	|
+let rec wpc (c:cmd) (w:astn) = match c with 
+  | Skip -> w
+  | Asg(x,a) -> subst x a w
+  | Seq(c1,c2) -> (wpc c1 (wpc c2 w))
+  | If(b,c1,c2) -> AAnd(AImpl(bexpToastn(b), (wpc c1 w)),
+                        AImpl(bexpToastn(PNot(b)), (wpc c2 w)))
+  | Wh(b,w2,c1) -> w2
+
+let rec vcg (c:cmd) (w:astn) = match c with
+  | Skip -> (ABool(true))
+  | Asg(x,a) -> (ABool(true))
+  | Seq(c1,c2) -> AAnd((vcg c1 (wpc c2 w)),(vcg c2 w))
+  | If(b,c1,c2) -> AAnd((vcg c1 w),(vcg c2 w))
+  | Wh(b,w2,c1) -> AAnd(AAnd(AImpl(AAnd(w2,ANot(bexpToastn(b))),w),
+  AImpl(AAnd(w2,bexpToastn(b)),(wpc c1 w2))), (vcg c1 w2))
 	
 let rec vcgen (fi,function,psi) = function
 	| 
